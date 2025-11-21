@@ -15,6 +15,9 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Chart.js for visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
     <style>
         body {
             margin: 0;
@@ -42,6 +45,183 @@
         const RefreshCw = ({ className = "w-5 h-5" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>;
         const CheckCircle = ({ className = "w-5 h-5" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
         const AlertCircle = ({ className = "w-5 h-5" }) => <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+
+        // Chart components using Chart.js
+        const ModelComparisonChart = ({ predictions }) => {
+            const canvasRef = React.useRef(null);
+            const chartRef = React.useRef(null);
+
+            React.useEffect(() => {
+                if (!canvasRef.current || !predictions) return;
+
+                // Destroy previous chart if exists
+                if (chartRef.current) {
+                    chartRef.current.destroy();
+                }
+
+                const ctx = canvasRef.current.getContext('2d');
+                chartRef.current = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['SVR Model', 'Decision Tree', 'ANN Model', 'Ensemble'],
+                        datasets: [{
+                            label: 'Drying Rate (%/hour)',
+                            data: [
+                                predictions.svr,
+                                predictions.decisionTree,
+                                predictions.ann,
+                                predictions.ensemble
+                            ],
+                            backgroundColor: [
+                                'rgba(147, 51, 234, 0.7)',  // Purple for SVR
+                                'rgba(34, 197, 94, 0.7)',   // Green for Decision Tree
+                                'rgba(59, 130, 246, 0.7)',  // Blue for ANN
+                                'rgba(249, 115, 22, 0.7)'   // Orange for Ensemble
+                            ],
+                            borderColor: [
+                                'rgba(147, 51, 234, 1)',
+                                'rgba(34, 197, 94, 1)',
+                                'rgba(59, 130, 246, 1)',
+                                'rgba(249, 115, 22, 1)'
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            title: {
+                                display: true,
+                                text: 'Model Comparison: Predicted Drying Rates',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Drying Rate (%/hour)'
+                                }
+                            }
+                        }
+                    }
+                });
+
+                return () => {
+                    if (chartRef.current) {
+                        chartRef.current.destroy();
+                    }
+                };
+            }, [predictions]);
+
+            return <canvas ref={canvasRef} />;
+        };
+
+        const MoistureTimeSeriesChart = ({ timeSeries }) => {
+            const canvasRef = React.useRef(null);
+            const chartRef = React.useRef(null);
+
+            React.useEffect(() => {
+                if (!canvasRef.current || !timeSeries) return;
+
+                // Destroy previous chart if exists
+                if (chartRef.current) {
+                    chartRef.current.destroy();
+                }
+
+                const ctx = canvasRef.current.getContext('2d');
+                chartRef.current = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timeSeries.map(point => `${point.hour}h`),
+                        datasets: [
+                            {
+                                label: 'SVR Model',
+                                data: timeSeries.map(point => point.svr),
+                                borderColor: 'rgba(147, 51, 234, 1)',
+                                backgroundColor: 'rgba(147, 51, 234, 0.1)',
+                                borderWidth: 2,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Decision Tree',
+                                data: timeSeries.map(point => point.decision_tree),
+                                borderColor: 'rgba(34, 197, 94, 1)',
+                                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                                borderWidth: 2,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'ANN Model',
+                                data: timeSeries.map(point => point.ann),
+                                borderColor: 'rgba(59, 130, 246, 1)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                borderWidth: 2,
+                                tension: 0.4
+                            },
+                            {
+                                label: 'Ensemble (Recommended)',
+                                data: timeSeries.map(point => point.ensemble),
+                                borderColor: 'rgba(249, 115, 22, 1)',
+                                backgroundColor: 'rgba(249, 115, 22, 0.1)',
+                                borderWidth: 3,
+                                borderDash: [5, 5],
+                                tension: 0.4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Moisture Content Over Time - All Models',
+                                font: {
+                                    size: 16,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Moisture Content (%)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time (hours)'
+                                }
+                            }
+                        }
+                    }
+                });
+
+                return () => {
+                    if (chartRef.current) {
+                        chartRef.current.destroy();
+                    }
+                };
+            }, [timeSeries]);
+
+            return <canvas ref={canvasRef} />;
+        };
 
         const SolarFishDryerPredictor = () => {
             const [inputData, setInputData] = useState({
@@ -510,10 +690,40 @@
                                             </div>
                                         </div>
 
-                                        {/* Time Series Data Table */}
+                                        {/* Model Comparison Bar Chart */}
                                         <div className="bg-white rounded-lg shadow-lg p-6">
-                                            <h2 className="text-xl font-bold text-gray-800 mb-4">Moisture Content Over Time</h2>
-                                            <div className="overflow-x-auto">
+                                            <h2 className="text-xl font-bold text-gray-800 mb-4">Model Comparison Chart</h2>
+                                            <div style={{ height: '300px' }}>
+                                                <ModelComparisonChart predictions={predictions} />
+                                            </div>
+                                            <div className="mt-4 text-sm text-gray-600 space-y-2">
+                                                <p><strong>How to read this chart:</strong></p>
+                                                <ul className="list-disc list-inside space-y-1">
+                                                    <li><span className="text-purple-700 font-semibold">Purple (SVR):</span> Support Vector Regression - Robust to outliers</li>
+                                                    <li><span className="text-green-700 font-semibold">Green (Decision Tree):</span> Most interpretable model</li>
+                                                    <li><span className="text-blue-700 font-semibold">Blue (ANN):</span> Artificial Neural Network - Highest accuracy potential</li>
+                                                    <li><span className="text-orange-700 font-semibold">Orange (Ensemble):</span> Combined prediction - Most reliable (RECOMMENDED)</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        {/* Moisture Content Line Chart */}
+                                        <div className="bg-white rounded-lg shadow-lg p-6">
+                                            <h2 className="text-xl font-bold text-gray-800 mb-4">Moisture Content Over Time (All Models)</h2>
+                                            <div style={{ height: '400px' }}>
+                                                <MoistureTimeSeriesChart timeSeries={predictions.timeSeries} />
+                                            </div>
+                                            <div className="mt-4 text-sm text-gray-600">
+                                                <p><strong>Understanding the chart:</strong> Each line shows how each ML model predicts moisture content will decrease over time. The dashed orange line (Ensemble) combines all three models for the most reliable prediction.</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Time Series Data Table - Collapsed by default */}
+                                        <details className="bg-white rounded-lg shadow-lg p-6">
+                                            <summary className="text-xl font-bold text-gray-800 mb-4 cursor-pointer">
+                                                📊 View Detailed Data Table (Click to expand)
+                                            </summary>
+                                            <div className="overflow-x-auto mt-4">
                                                 <table className="w-full text-sm">
                                                     <thead>
                                                         <tr className="border-b-2 border-gray-300">
@@ -525,7 +735,7 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        {predictions.timeSeries.slice(0, 15).map((point, index) => (
+                                                        {predictions.timeSeries.slice(0, 20).map((point, index) => (
                                                             <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
                                                                 <td className="p-2 font-semibold">{point.hour}</td>
                                                                 <td className="text-right p-2">{point.svr?.toFixed(1) || '-'}</td>
@@ -537,12 +747,12 @@
                                                     </tbody>
                                                 </table>
                                             </div>
-                                            {predictions.timeSeries.length > 15 && (
+                                            {predictions.timeSeries.length > 20 && (
                                                 <p className="text-xs text-gray-500 mt-2 text-center">
-                                                    Showing first 15 hours of {predictions.timeSeries.length} total predictions
+                                                    Showing first 20 hours of {predictions.timeSeries.length} total predictions
                                                 </p>
                                             )}
-                                        </div>
+                                        </details>
 
                                         {/* Recommendations */}
                                         <div className="bg-white rounded-lg shadow-lg p-6">
