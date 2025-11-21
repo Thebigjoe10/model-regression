@@ -200,6 +200,62 @@ def predict_time_series(initial_data, drying_rate):
     
     return time_series
 
+@app.route('/', methods=['GET'])
+def root():
+    """Root endpoint - API documentation"""
+    return jsonify({
+        'name': 'Solar Fish Dryer ML API',
+        'version': '1.0.0',
+        'description': 'Machine learning API for predicting fish drying rates',
+        'endpoints': {
+            'GET /': 'This documentation',
+            'GET /api': 'API endpoints list',
+            'GET /api/health': 'Health check',
+            'GET /api/metrics': 'Get model performance metrics',
+            'POST /api/train': 'Train ML models',
+            'POST /api/predict': 'Make drying rate predictions',
+            'POST /api/upload-data': 'Upload custom training data'
+        },
+        'frontend_url': 'Use with React frontend or test with curl',
+        'documentation': 'See README.md in repository'
+    })
+
+@app.route('/api', methods=['GET'])
+def api_root():
+    """API root endpoint"""
+    return jsonify({
+        'message': 'Solar Fish Dryer ML API',
+        'version': '1.0.0',
+        'endpoints': [
+            {
+                'path': '/api/health',
+                'method': 'GET',
+                'description': 'Check if the API is running and models are trained'
+            },
+            {
+                'path': '/api/metrics',
+                'method': 'GET',
+                'description': 'Get model performance metrics (RMSE, R²)'
+            },
+            {
+                'path': '/api/train',
+                'method': 'POST',
+                'description': 'Train or retrain the ML models'
+            },
+            {
+                'path': '/api/predict',
+                'method': 'POST',
+                'description': 'Make drying rate predictions',
+                'required_fields': ['temperature', 'humidity', 'solar_radiation', 'wind_speed', 'initial_moisture', 'fish_thickness', 'fish_type']
+            },
+            {
+                'path': '/api/upload-data',
+                'method': 'POST',
+                'description': 'Upload custom training data (CSV file)'
+            }
+        ]
+    })
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
@@ -224,9 +280,18 @@ def get_metrics():
         'metrics': model_metrics
     })
 
-@app.route('/api/train', methods=['POST'])
+@app.route('/api/train', methods=['GET', 'POST'])
 def train_models_endpoint():
     """Train or retrain models"""
+    # Handle GET requests with helpful message
+    if request.method == 'GET':
+        return jsonify({
+            'message': 'This endpoint requires a POST request to train models',
+            'method': 'POST',
+            'endpoint': '/api/train',
+            'curl_example': 'curl -X POST ' + request.url_root + 'api/train -H "Content-Type: application/json"'
+        })
+
     try:
         metrics = train_models_func()
         return jsonify({
@@ -240,15 +305,33 @@ def train_models_endpoint():
             'error': str(e)
         }), 500
 
-@app.route('/api/predict', methods=['POST'])
+@app.route('/api/predict', methods=['GET', 'POST'])
 def predict():
     """Make predictions using trained models"""
+    # Handle GET requests with helpful message
+    if request.method == 'GET':
+        return jsonify({
+            'message': 'This endpoint requires a POST request with JSON data',
+            'method': 'POST',
+            'endpoint': '/api/predict',
+            'example': {
+                'temperature': 32,
+                'humidity': 55,
+                'solar_radiation': 850,
+                'wind_speed': 3.2,
+                'initial_moisture': 78,
+                'fish_thickness': 2.0,
+                'fish_type': 'tilapia'
+            },
+            'curl_example': 'curl -X POST ' + request.url_root + 'api/predict -H "Content-Type: application/json" -d \'{"temperature":32,"humidity":55,"solar_radiation":850,"wind_speed":3.2,"initial_moisture":78,"fish_thickness":2.0,"fish_type":"tilapia"}\''
+        })
+
     if not trained:
         return jsonify({
             'success': False,
             'error': 'Models not trained yet. Please train models first.'
         }), 400
-    
+
     try:
         data = request.json
         
