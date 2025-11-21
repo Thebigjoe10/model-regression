@@ -366,19 +366,26 @@ def upload_data():
             'error': str(e)
         }), 500
 
+# Initialize models on startup (for production deployment)
+if not load_models():
+    print("No pre-trained models found. Training new models...")
+    train_models_func()
+
 if __name__ == '__main__':
+    # Get port from environment variable (for production) or use 5000 (for local)
+    port = int(os.environ.get('PORT', 5000))
+
+    # Determine if running in production
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+
     print("\n=== Solar Fish Dryer ML Backend ===")
-    
-    # Try to load existing models, if not found, train new ones
-    if not load_models():
-        train_models_func()
-    
-    print("\nServer starting on http://localhost:5000")
+    print(f"Environment: {'Production' if is_production else 'Development'}")
+    print(f"Server starting on port {port}")
     print("API Endpoints:")
     print("  - POST /api/predict - Make predictions")
     print("  - POST /api/train - Train models")
     print("  - GET /api/metrics - Get model metrics")
     print("  - POST /api/upload-data - Upload custom data")
     print("  - GET /api/health - Health check")
-    
-    app.run(host='0.0.0.0', port=5000, debug=True)
+
+    app.run(debug=not is_production, port=port, host='0.0.0.0')
