@@ -1,0 +1,18 @@
+{
+  "name": "solar-fish-dryer-frontend",
+  "version": "1.0.0",
+  "description": "Solar Fish Dryer ML System - Frontend",
+  "scripts": {
+    "dev": "python -m http.server 8080 --directory public",
+    "build": "echo 'Static build complete'",
+    "start": "python -m http.server 8080 --directory public"
+  },
+  "keywords": [
+    "machine-learning",
+    "solar-dryer",
+    "fish-processing",
+    "react"
+  ],
+  "author": "",
+  "license": "MIT"
+}
