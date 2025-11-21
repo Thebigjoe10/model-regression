@@ -414,35 +414,68 @@ def upload_data():
                 'success': False,
                 'error': 'No file provided'
             }), 400
-        
+
         file = request.files['file']
-        
+
         if file.filename == '':
             return jsonify({
                 'success': False,
                 'error': 'No file selected'
             }), 400
-        
+
         # Read CSV
         df = pd.read_csv(file)
-        
+
+        # Define required columns with user-friendly names
+        required_cols_user = ['temperature', 'humidity', 'solar_radiation', 'wind_speed',
+                              'initial_moisture', 'fish_thickness', 'drying_rate']
+
+        # Check if CSV has fish_type or fish_type_encoded
+        has_fish_type = 'fish_type' in df.columns
+        has_fish_type_encoded = 'fish_type_encoded' in df.columns
+
         # Validate required columns
-        required_cols = feature_columns + ['drying_rate']
-        if not all(col in df.columns for col in required_cols):
+        if not all(col in df.columns for col in required_cols_user):
             return jsonify({
                 'success': False,
-                'error': f'CSV must contain columns: {", ".join(required_cols)}'
+                'error': f'CSV must contain columns: {", ".join(required_cols_user + ["fish_type or fish_type_encoded"])}'
             }), 400
-        
+
+        # Check if fish type column exists
+        if not has_fish_type and not has_fish_type_encoded:
+            return jsonify({
+                'success': False,
+                'error': 'CSV must contain either "fish_type" or "fish_type_encoded" column'
+            }), 400
+
+        # If fish_type is provided, encode it
+        if has_fish_type and not has_fish_type_encoded:
+            df['fish_type_encoded'] = df['fish_type'].str.lower().map(fish_type_mapping)
+            # Check for unmapped fish types
+            if df['fish_type_encoded'].isnull().any():
+                unmapped = df[df['fish_type_encoded'].isnull()]['fish_type'].unique()
+                return jsonify({
+                    'success': False,
+                    'error': f'Unknown fish types: {", ".join(unmapped)}. Valid types: {", ".join(fish_type_mapping.keys())}'
+                }), 400
+
+        # Ensure all required feature columns exist
+        for col in feature_columns:
+            if col not in df.columns:
+                return jsonify({
+                    'success': False,
+                    'error': f'Missing required column: {col}'
+                }), 400
+
         # Save the uploaded data
         os.makedirs('uploaded_data', exist_ok=True)
         df.to_csv('uploaded_data/custom_data.csv', index=False)
-        
+
         return jsonify({
             'success': True,
             'message': f'Successfully uploaded {len(df)} samples. You can now retrain the models.'
         })
-        
+
     except Exception as e:
         return jsonify({
             'success': False,
