@@ -15,9 +15,6 @@
     <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Recharts -->
-    <script src="https://unpkg.com/recharts@2.5.0/dist/Recharts.js"></script>
-
     <style>
         body {
             margin: 0;
@@ -32,7 +29,6 @@
 
     <script type="text/babel">
         const { useState, useEffect } = React;
-        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar } = Recharts;
 
         // Lucide React icons (inline SVG components)
         const Sun = () => <svg className="w-10 h-10 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>;
@@ -67,11 +63,7 @@
             const [modelMetrics, setModelMetrics] = useState(null);
             const [training, setTraining] = useState(false);
 
-            // IMPORTANT: Replace with your actual Render backend URL
-            const API_URL = window.location.hostname === 'localhost'
-                ? 'https://model-regression.onrender.com/api'
-                : 'http://localhost:5000/api';// ⚠️ CHANGE THIS!
-
+            const API_URL = 'https://model-regression.onrender.com/api';
             const fishTypes = ['tilapia', 'catfish', 'mackerel', 'sardine', 'salmon'];
 
             useEffect(() => {
@@ -138,7 +130,7 @@
 
             const predictDryingRate = async () => {
                 if (!backendStatus.connected) {
-                    alert('Backend is not connected. Please check your backend URL in the code.');
+                    alert('Backend is not connected. Please check your backend URL.');
                     return;
                 }
 
@@ -518,6 +510,40 @@
                                             </div>
                                         </div>
 
+                                        {/* Time Series Data Table */}
+                                        <div className="bg-white rounded-lg shadow-lg p-6">
+                                            <h2 className="text-xl font-bold text-gray-800 mb-4">Moisture Content Over Time</h2>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-sm">
+                                                    <thead>
+                                                        <tr className="border-b-2 border-gray-300">
+                                                            <th className="text-left p-2">Hour</th>
+                                                            <th className="text-right p-2 text-purple-700">SVR (%)</th>
+                                                            <th className="text-right p-2 text-green-700">Decision Tree (%)</th>
+                                                            <th className="text-right p-2 text-blue-700">ANN (%)</th>
+                                                            <th className="text-right p-2 text-orange-700">Ensemble (%)</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {predictions.timeSeries.slice(0, 15).map((point, index) => (
+                                                            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                                                                <td className="p-2 font-semibold">{point.hour}</td>
+                                                                <td className="text-right p-2">{point.svr?.toFixed(1) || '-'}</td>
+                                                                <td className="text-right p-2">{point.decision_tree?.toFixed(1) || '-'}</td>
+                                                                <td className="text-right p-2">{point.ann?.toFixed(1) || '-'}</td>
+                                                                <td className="text-right p-2 font-semibold">{point.ensemble?.toFixed(1) || '-'}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                            {predictions.timeSeries.length > 15 && (
+                                                <p className="text-xs text-gray-500 mt-2 text-center">
+                                                    Showing first 15 hours of {predictions.timeSeries.length} total predictions
+                                                </p>
+                                            )}
+                                        </div>
+
                                         {/* Recommendations */}
                                         <div className="bg-white rounded-lg shadow-lg p-6">
                                             <h2 className="text-xl font-bold text-gray-800 mb-4">Recommendations</h2>
@@ -546,7 +572,7 @@
                                         <h3 className="text-xl font-semibold text-gray-600 mb-2">No Predictions Yet</h3>
                                         <p className="text-gray-500">
                                             {!backendStatus.connected
-                                                ? 'Backend not connected. Check the API URL in the HTML file.'
+                                                ? 'Backend not connected. Check the API URL.'
                                                 : !backendStatus.trained
                                                 ? 'Train the models first, then enter parameters and predict'
                                                 : 'Enter your environmental parameters and click "Predict Drying Rate"'
